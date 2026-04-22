@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Destination B2 Study App</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0f1117; font-family: 'Crimson Pro', Georgia, serif; color: #e8e0d0; overflow: hidden; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 4px; }
+
+  #api-gate {
+    position: fixed; inset: 0; background: #0f1117;
+    display: flex; align-items: center; justify-content: center; z-index: 999;
+  }
+  .gate-box {
+    background: #16181f; border: 1px solid #2a2d3a; border-radius: 16px;
+    padding: 36px 32px; max-width: 420px; width: 90%; text-align: center;
+  }
+  .gate-box h2 { font-size: 22px; color: #f0e6c8; margin-bottom: 8px; }
+  .gate-box p { font-size: 13px; color: #6a6a8a; line-height: 1.7; margin-bottom: 6px; }
+  .gate-steps {
+    background: #0f1117; border: 1px solid #2a2d3a; border-radius: 10px;
+    padding: 14px 16px; margin: 14px 0; text-align: left; font-size: 13px; color: #8080a0; line-height: 2;
+  }
+  .gate-steps a { color: #c9a84c; text-decoration: none; }
+  .gate-steps a:hover { text-decoration: underline; }
+  .gate-input {
+    width: 100%; padding: 12px 14px; background: #0f1117; border: 1px solid #2a2d3a;
+    border-radius: 10px; color: #e8e0d0; font-size: 14px; outline: none;
+    font-family: monospace; margin-bottom: 12px;
+  }
+  .gate-input:focus { border-color: #c9a84c66; }
+  .gate-btn {
+    width: 100%; padding: 13px; background: #c9a84c; border: none; border-radius: 10px;
+    color: #0f1117; font-size: 15px; font-weight: bold; cursor: pointer; font-family: inherit;
+  }
+  .gate-btn:hover { background: #dbb85c; }
+  .gate-note { font-size: 11px; color: #3a3a5a; margin-top: 10px; }
+  .free-badge {
+    display: inline-block; background: #1a3a1a; border: 1px solid #3a6a3a;
+    color: #8aba8a; font-size: 11px; padding: 2px 10px; border-radius: 20px;
+    margin-bottom: 12px; letter-spacing: 1px;
+  }
+
+  #app { display: flex; height: 100vh; overflow: hidden; }
+
+  #sidebar {
+    width: 240px; min-width: 240px; background: #16181f;
+    border-right: 1px solid #2a2d3a; display: flex; flex-direction: column;
+    transition: all 0.3s ease; overflow: hidden;
+  }
+  #sidebar.closed { width: 0; min-width: 0; }
+  .sidebar-header { padding: 18px 16px 12px; border-bottom: 1px solid #2a2d3a; }
+  .sidebar-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #c9a84c; }
+  .sidebar-title { font-size: 17px; font-weight: 600; color: #f0e6c8; line-height: 1.3; margin-top: 2px; }
+  .unit-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+  .unit-btn {
+    width: 100%; text-align: left; padding: 9px 16px; background: transparent;
+    border: none; border-left: 3px solid transparent; color: #7070a0;
+    cursor: pointer; font-size: 13px; line-height: 1.4; transition: all 0.15s; font-family: inherit;
+  }
+  .unit-btn:hover { color: #b0b0c0; background: #1a1c24; }
+  .unit-btn.active { background: #c9a84c15; border-left-color: #c9a84c; color: #c9a84c; }
+  .unit-num { font-size: 10px; opacity: 0.55; display: block; }
+  .sidebar-footer { padding: 10px 16px; border-top: 1px solid #2a2d3a; font-size: 11px; color: #2a2a4a; }
+
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #header {
+    display: flex; align-items: center; gap: 10px; padding: 12px 18px;
+    border-bottom: 1px solid #2a2d3a; background: #13151c; flex-wrap: wrap;
+  }
+  #toggle-btn {
+    background: none; border: 1px solid #2a2d3a; color: #7070a0;
+    cursor: pointer; padding: 5px 10px; border-radius: 6px; font-size: 14px;
+  }
+  #unit-tag { flex: 1; font-size: 14px; font-weight: 600; color: #f0e6c8; min-width: 120px; }
+  .mode-bar { display: flex; gap: 6px; }
+  .mode-btn {
+    padding: 6px 13px; background: #1e2030; color: #7070a0;
+    border: none; border-radius: 20px; cursor: pointer; font-size: 12px;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .mode-btn.active { background: #c9a84c; color: #0f1117; font-weight: bold; }
+
+  #content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  #chat-area { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .empty-state { margin: auto; text-align: center; color: #3a3a5a; padding: 20px; }
+  .empty-icon { font-size: 44px; margin-bottom: 10px; }
+  .empty-title { font-size: 18px; color: #5a5a7a; margin-bottom: 8px; }
+  .empty-desc { font-size: 13px; line-height: 1.6; color: #3a3a5a; max-width: 300px; margin: 0 auto 16px; }
+  .suggestion {
+    display: inline-block; margin: 3px; padding: 5px 13px;
+    background: #1a1c24; border: 1px solid #2a2d3a; border-radius: 20px;
+    font-size: 12px; color: #c9a84c; cursor: pointer;
+  }
+  .suggestion:hover { background: #222438; }
+  .msg-wrap { display: flex; }
+  .msg-wrap.user { justify-content: flex-end; }
+  .msg-wrap.assistant { justify-content: flex-start; }
+  .msg-inner { max-width: 76%; }
+  .msg-role { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .msg-wrap.user .msg-role { color: #c9a84c; text-align: right; }
+  .msg-wrap.assistant .msg-role { color: #6a9a6a; }
+  .msg-bubble { padding: 11px 15px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+  .msg-wrap.user .msg-bubble { background: #c9a84c18; border: 1px solid #c9a84c33; border-radius: 18px 18px 4px 18px; }
+  .msg-wrap.assistant .msg-bubble { background: #1e2030; border: 1px solid #2a2d3a; border-radius: 4px 18px 18px 18px; }
+  .loader { display: flex; gap: 5px; align-items: center; padding: 10px 14px; color: #4a4a6a; font-size: 13px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #c9a84c; animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+
+  #input-area {
+    padding: 14px 18px; border-top: 1px solid #2a2d3a;
+    display: flex; gap: 10px; background: #13151c;
+  }
+  #chat-input {
+    flex: 1; background: #1e2030; border: 1px solid #2a2d3a; border-radius: 12px;
+    padding: 11px 15px; color: #e8e0d0; font-size: 14px; outline: none;
+    font-family: inherit; resize: none;
+  }
+  #chat-input:focus { border-color: #c9a84c44; }
+  #send-btn {
+    background: #c9a84c; border: none; border-radius: 12px;
+    padding: 0 18px; color: #0f1117; font-size: 18px; cursor: pointer;
+  }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #flash-area {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px 18px; gap: 18px;
+  }
+  .card-outer { width: 100%; max-width: 480px; height: 270px; perspective: 1000px; cursor: pointer; }
+  .card-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4,0,0.2,1); }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+    -webkit-backface-visibility: hidden; background: #1e2030; border: 1px solid #2a2d3a;
+    border-radius: 16px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 22px; text-align: center;
+  }
+  .card-back { transform: rotateY(180deg); background: #1a2a1a; border-color: #3a5a3a; }
+  .card-word { font-size: 34px; font-weight: 600; color: #f0e6c8; margin-bottom: 6px; }
+  .card-phonetic { font-size: 17px; color: #c9a84c; font-style: italic; margin-bottom: 6px; }
+  .card-hint { font-size: 12px; color: #3a3a5a; margin-top: auto; }
+  .card-meaning { font-size: 14px; color: #b0c0b0; line-height: 1.6; margin-bottom: 10px; }
+  .card-viet { font-size: 17px; color: #8aba8a; font-weight: 600; margin-bottom: 10px; }
+  .card-example { font-size: 12px; color: #6070a0; font-style: italic; line-height: 1.5; }
+  .card-nav { display: flex; align-items: center; gap: 14px; }
+  .nav-btn {
+    background: #1e2030; border: 1px solid #2a2d3a; color: #c0c0d0;
+    padding: 9px 18px; border-radius: 10px; cursor: pointer; font-size: 13px; font-family: inherit;
+  }
+  .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .card-counter { font-size: 13px; color: #4a4a6a; min-width: 50px; text-align: center; }
+
+  #quiz-area {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; padding: 24px 18px; gap: 18px; overflow-y: auto;
+  }
+  .score-bar { font-size: 13px; color: #5a5a7a; display: flex; gap: 18px; }
+  .score-good { color: #8aba8a; font-weight: bold; }
+  .score-num { color: #c9a84c; font-weight: bold; }
+  .quiz-card { width: 100%; max-width: 520px; background: #1e2030; border: 1px solid #2a2d3a; border-radius: 16px; padding: 22px; }
+  .quiz-q { font-size: 16px; line-height: 1.6; color: #f0e6c8; margin-bottom: 18px; }
+  .option-btn {
+    width: 100%; padding: 11px 15px; margin: 5px 0; background: #16181f;
+    border: 1px solid #2a2d3a; border-radius: 10px; color: #b0b0c0;
+    cursor: pointer; font-size: 14px; text-align: left; transition: all 0.2s; font-family: inherit;
+  }
+  .option-btn:hover:not(:disabled) { background: #1e2030; }
+  .option-btn.correct { background: #1a3a1a !important; border-color: #4a8a4a !important; color: #8aba8a !important; }
+  .option-btn.wrong { background: #3a1a1a !important; border-color: #8a4a4a !important; color: #c08080 !important; }
+  .option-btn:disabled { cursor: default; }
+  .option-letter { color: #c9a84c; margin-right: 8px; }
+  .explanation {
+    background: #16181f; border: 1px solid #2a3a2a; border-radius: 10px;
+    padding: 12px 15px; font-size: 13px; color: #90a090; line-height: 1.6; margin-top: 12px;
+  }
+  .gen-btn {
+    padding: 13px 30px; background: #c9a84c; border: none; border-radius: 12px;
+    color: #0f1117; font-size: 15px; font-weight: bold; cursor: pointer; font-family: inherit;
+  }
+  .gen-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .next-btn {
+    padding: 11px 26px; background: #c9a84c; border: none; border-radius: 10px;
+    color: #0f1117; font-size: 14px; font-weight: bold; cursor: pointer; font-family: inherit; margin-top: 10px;
+  }
+  .panel { display: none; }
+  .panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+  .error-msg { color: #c08080; font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<!-- API Key Gate -->
+<div id="api-gate">
+  <div class="gate-box">
+    <div style="font-size:36px;margin-bottom:8px">📖</div>
+    <div class="free-badge">✦ 100% FREE</div>
+    <h2>Destination B2 Study App</h2>
+    <p>Uses Google Gemini — free, no credit card needed.</p>
+    <div class="gate-steps">
+      1. Go to <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a><br>
+      2. Click <strong>"Create API Key"</strong><br>
+      3. Copy and paste it below 👇
+    </div>
+    <input class="gate-input" id="api-key-input" type="password" placeholder="AIza..." />
+    <div class="error-msg" id="gate-error"></div>
+    <br><br>
+    <button class="gate-btn" onclick="startApp()">Start Studying 🚀</button>
+    <div class="gate-note">Your key stays in your browser only. Never stored or shared.</div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app" style="display:none">
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-label">Destination</div>
+      <div class="sidebar-title">B2 Vocabulary<br>Study App</div>
+    </div>
+    <div class="unit-list" id="unit-list"></div>
+    <div class="sidebar-footer">14 units · 216 pages · B2 Level</div>
+  </div>
+
+  <div id="main">
+    <div id="header">
+      <button id="toggle-btn" onclick="toggleSidebar()">◀</button>
+      <div id="unit-tag">Unit 2 · Travel & Transport</div>
+      <div class="mode-bar">
+        <button class="mode-btn active" onclick="setMode('chat')">💬 Ask AI</button>
+        <button class="mode-btn" onclick="setMode('flashcard')">🃏 Flashcards</button>
+        <button class="mode-btn" onclick="setMode('quiz')">🎯 Quiz Me</button>
+      </div>
+    </div>
+
+    <div id="content">
+
+      <!-- Chat -->
+      <div id="panel-chat" class="panel active">
+        <div id="chat-area">
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon">📖</div>
+            <div class="empty-title">Ask about this unit's vocabulary</div>
+            <div class="empty-desc">Ask about word meanings, differences, collocations, or examples</div>
+            <div id="suggestions"></div>
+          </div>
+        </div>
+        <div id="input-area">
+          <textarea id="chat-input" rows="2" placeholder="Ask about vocabulary..."></textarea>
+          <button id="send-btn" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+
+      <!-- Flashcards -->
+      <div id="panel-flashcard" class="panel">
+        <div id="flash-area">
+          <div id="flash-empty" style="text-align:center;color:#4a4a5a">
+            <div style="font-size:40px;margin-bottom:10px">🃏</div>
+            <div style="font-size:15px;color:#5a5a7a;margin-bottom:18px">Generate AI flashcards for this unit</div>
+            <button class="gen-btn" id="gen-flash-btn" onclick="generateFlashcards()">Generate Flashcards</button>
+          </div>
+          <div id="flash-cards" style="display:none;width:100%;max-width:480px;flex-direction:column;align-items:center;gap:16px">
+            <div id="flash-unit-label" style="font-size:12px;color:#4a4a6a;letter-spacing:2px"></div>
+            <div class="card-outer" onclick="flipCard()">
+              <div class="card-inner" id="card-inner">
+                <div class="card-face">
+                  <div class="card-word" id="card-word"></div>
+                  <div class="card-phonetic" id="card-phonetic"></div>
+                  <div class="card-hint">Click to reveal meaning</div>
+                </div>
+                <div class="card-face card-back">
+                  <div class="card-meaning" id="card-meaning"></div>
+                  <div class="card-viet" id="card-viet"></div>
+                  <div class="card-example" id="card-example"></div>
+                </div>
+              </div>
+            </div>
+            <div class="card-nav">
+              <button class="nav-btn" id="prev-btn" onclick="prevCard()">← Prev</button>
+              <div class="card-counter" id="card-counter">1 / 8</div>
+              <button class="nav-btn" id="next-btn" onclick="nextCard()">Next →</button>
+            </div>
+            <button class="nav-btn" onclick="generateFlashcards()" style="font-size:12px;color:#4a4a6a">↻ New Set</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz -->
+      <div id="panel-quiz" class="panel">
+        <div id="quiz-area">
+          <div class="score-bar">
+            <span>Score: <span class="score-good" id="q-correct">0</span> / <span id="q-total">0</span></span>
+            <span id="q-accuracy"></span>
+          </div>
+          <div id="quiz-empty" style="text-align:center;color:#4a4a5a">
+            <div style="font-size:40px;margin-bottom:10px">🎯</div>
+            <div style="font-size:15px;color:#5a5a7a;margin-bottom:18px">Test your knowledge of this unit</div>
+            <button class="gen-btn" onclick="generateQuiz()">Start Quiz</button>
+          </div>
+          <div id="quiz-card" class="quiz-card" style="display:none">
+            <div class="quiz-q" id="quiz-q"></div>
+            <div id="quiz-options"></div>
+            <div class="explanation" id="quiz-explanation" style="display:none"></div>
+            <button class="next-btn" id="quiz-next" style="display:none" onclick="generateQuiz()">Next Question →</button>
+          </div>
+          <div class="loader" id="quiz-loader" style="display:none">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            <span>Generating question...</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const UNITS = [
+  { id: 2, name: "Travel & Transport" },
+  { id: 4, name: "Hobbies, Sport & Games" },
+  { id: 6, name: "Science & Technology" },
+  { id: 8, name: "The Media" },
+  { id: 10, name: "People & Society" },
+  { id: 12, name: "The Law & Crime" },
+  { id: 14, name: "Health & Fitness" },
+  { id: 16, name: "Food & Drink" },
+  { id: 18, name: "Education & Learning" },
+  { id: 20, name: "Weather & Environment" },
+  { id: 22, name: "Money & Shopping" },
+  { id: 24, name: "Entertainment" },
+  { id: 26, name: "Fashion & Design" },
+  { id: 28, name: "Work & Business" },
+];
+
+const SUGGESTIONS = [
+  "Explain the difference between 2 confusing words in this unit",
+  "Give me 5 key words with Vietnamese meanings",
+  "What are common collocations in this unit?",
+  "Make an example sentence for each key word",
+];
+
+let apiKey = "";
+let selectedUnit = UNITS[0];
+let currentMode = "chat";
+let messages = [];
+let loading = false;
+let flashcards = [];
+let cardIndex = 0;
+let isFlipped = false;
+let quiz = null;
+let quizAnswer = null;
+let quizScore = { correct: 0, total: 0 };
+let sidebarOpen = true;
+
+function startApp() {
+  const key = document.getElementById("api-key-input").value.trim();
+  if (!key) {
+    document.getElementById("gate-error").textContent = "Please enter your API key.";
+    return;
+  }
+  apiKey = key;
+  document.getElementById("api-gate").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  buildUnitList();
+  updateUnitDisplay();
+  buildSuggestions();
+}
+
+function buildUnitList() {
+  const list = document.getElementById("unit-list");
+  list.innerHTML = "";
+  UNITS.forEach(u => {
+    const btn = document.createElement("button");
+    btn.className = "unit-btn" + (u.id === selectedUnit.id ? " active" : "");
+    btn.innerHTML = `<span class="unit-num">UNIT ${u.id}</span>${u.name}`;
+    btn.onclick = () => selectUnit(u);
+    list.appendChild(btn);
+  });
+}
+
+function selectUnit(u) {
+  selectedUnit = u;
+  updateUnitDisplay();
+  buildUnitList();
+  resetAllPanels();
+}
+
+function updateUnitDisplay() {
+  document.getElementById("unit-tag").textContent = `Unit ${selectedUnit.id} · ${selectedUnit.name}`;
+  document.getElementById("chat-input").placeholder = `Ask about ${selectedUnit.name} vocabulary...`;
+}
+
+function buildSuggestions() {
+  const el = document.getElementById("suggestions");
+  if (!el) return;
+  el.innerHTML = SUGGESTIONS.map(s =>
+    `<span class="suggestion" onclick="fillInput(this)">${s}</span>`
+  ).join("");
+}
+
+function fillInput(el) {
+  document.getElementById("chat-input").value = el.textContent;
+  document.getElementById("chat-input").focus();
+}
+
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById("sidebar").classList.toggle("closed", !sidebarOpen);
+  document.getElementById("toggle-btn").textContent = sidebarOpen ? "◀" : "▶";
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll(".mode-btn").forEach((b, i) => {
+    b.classList.toggle("active", ["chat","flashcard","quiz"][i] === mode);
+  });
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.getElementById(`panel-${mode}`).classList.add("active");
+}
+
+function resetAllPanels() {
+  // Reset chat
+  messages = [];
+  const area = document.getElementById("chat-area");
+  area.innerHTML = `
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">📖</div>
+      <div class="empty-title">Ask about Unit ${selectedUnit.id}</div>
+      <div class="empty-desc">Ask about word meanings, differences, collocations, or examples</div>
+      <div id="suggestions"></div>
+    </div>`;
+  buildSuggestions();
+
+  // Reset flashcards
+  flashcards = []; cardIndex = 0; isFlipped = false;
+  document.getElementById("flash-empty").style.display = "block";
+  document.getElementById("flash-cards").style.display = "none";
+
+  // Reset quiz
+  quiz = null; quizAnswer = null; quizScore = { correct: 0, total: 0 };
+  updateScore();
+  document.getElementById("quiz-empty").style.display = "block";
+  document.getElementById("quiz-card").style.display = "none";
+  document.getElementById("quiz-loader").style.display = "none";
+}
+
+const SYSTEM = `You are a friendly expert English vocabulary tutor for the Destination B2 textbook. The student is Vietnamese and learning English at B2 level.
+Guidelines:
+- Be encouraging and clear
+- When explaining words include: pronunciation, English meaning, Vietnamese translation, example sentence
+- For flashcards: return ONLY a JSON array, each item: {word, phonetic, meaning, vietnamese, example}
+- For quizzes: return ONLY a JSON object: {question, options: [4 strings], correct: 0-3, explanation}
+- Keep responses concise but helpful`;
+
+async function callGemini(prompt) {
+  const unitCtx = `Focus on UNIT ${selectedUnit.id}: ${selectedUnit.name.toUpperCase()} from Destination B2 vocabulary book.\n\n`;
+  
+  // Build conversation history for Gemini format
+  const contents = [];
+  
+  // Add previous messages
+  for (const m of messages) {
+    contents.push({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }]
+    });
+  }
+  
+  // Add current prompt
+  contents.push({
+    role: "user",
+    parts: [{ text: unitCtx + prompt }]
+  });
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM }] },
+        contents,
+        generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
+      })
+    }
+  );
+
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
+// ---- CHAT ----
+async function sendChat() {
+  const inputEl = document.getElementById("chat-input");
+  const text = inputEl.value.trim();
+  if (!text || loading) return;
+  inputEl.value = "";
+  loading = true;
+
+  const emptyState = document.getElementById("empty-state");
+  if (emptyState) emptyState.remove();
+
+  messages.push({ role: "user", content: text });
+  appendMsg("user", text);
+  appendLoader();
+  document.getElementById("send-btn").disabled = true;
+
+  try {
+    const reply = await callGemini(text);
+    messages.push({ role: "assistant", content: reply });
+    removeLoader();
+    appendMsg("assistant", reply);
+  } catch(e) {
+    removeLoader();
+    appendMsg("assistant", "⚠️ Error: " + e.message + "\n\nCheck your API key is correct.");
+  }
+  loading = false;
+  document.getElementById("send-btn").disabled = false;
+}
+
+function appendMsg(role, text) {
+  const area = document.getElementById("chat-area");
+  const wrap = document.createElement("div");
+  wrap.className = `msg-wrap ${role}`;
+  wrap.innerHTML = `
+    <div class="msg-inner">
+      <div class="msg-role">${role === "user" ? "You" : "AI Tutor"}</div>
+      <div class="msg-bubble">${escHtml(text)}</div>
+    </div>`;
+  area.appendChild(wrap);
+  area.scrollTop = area.scrollHeight;
+}
+
+function appendLoader() {
+  const area = document.getElementById("chat-area");
+  const div = document.createElement("div");
+  div.className = "loader"; div.id = "chat-loader";
+  div.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Thinking...</span>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+function removeLoader() {
+  const l = document.getElementById("chat-loader");
+  if (l) l.remove();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("chat-input").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+  document.getElementById("api-key-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") startApp();
+  });
+});
+
+// ---- FLASHCARDS ----
+async function generateFlashcards() {
+  const btn = document.getElementById("gen-flash-btn");
+  if (btn) btn.disabled = true;
+  document.getElementById("flash-cards").style.display = "none";
+  document.getElementById("flash-empty").style.display = "block";
+
+  // Show loading state
+  const emptyDiv = document.getElementById("flash-empty");
+  emptyDiv.innerHTML = `
+    <div class="loader" style="justify-content:center">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>Generating flashcards...</span>
+    </div>`;
+
+  try {
+    const prompt = `Generate exactly 8 flashcards for the most important vocabulary in Unit ${selectedUnit.id}: ${selectedUnit.name}.
+Return ONLY a valid JSON array. No markdown, no explanation. Each object must have: word, phonetic, meaning, vietnamese, example.`;
+    const text = await callGemini(prompt);
+    const clean = text.replace(/```json|```/g, "").trim();
+    flashcards = JSON.parse(clean);
+    cardIndex = 0; isFlipped = false;
+    document.getElementById("flash-empty").style.display = "none";
+    const fc = document.getElementById("flash-cards");
+    fc.style.display = "flex";
+    document.getElementById("flash-unit-label").textContent = `UNIT ${selectedUnit.id} · ${selectedUnit.name.toUpperCase()}`;
+    showCard();
+  } catch(e) {
+    document.getElementById("flash-empty").innerHTML = `
+      <div style="font-size:40px;margin-bottom:10px">🃏</div>
+      <div style="font-size:15px;color:#c08080;margin-bottom:18px">Error: ${e.message}</div>
+      <button class="gen-btn" id="gen-flash-btn" onclick="generateFlashcards()">Try Again</button>`;
+  }
+}
+
+function showCard() {
+  const c = flashcards[cardIndex];
+  if (!c) return;
+  document.getElementById("card-word").textContent = c.word;
+  document.getElementById("card-phonetic").textContent = c.phonetic || "";
+  document.getElementById("card-meaning").textContent = c.meaning;
+  document.getElementById("card-viet").textContent = "🇻🇳 " + c.vietnamese;
+  document.getElementById("card-example").textContent = `"${c.example}"`;
+  document.getElementById("card-counter").textContent = `${cardIndex + 1} / ${flashcards.length}`;
+  document.getElementById("prev-btn").disabled = cardIndex === 0;
+  document.getElementById("next-btn").disabled = cardIndex === flashcards.length - 1;
+  isFlipped = false;
+  document.getElementById("card-inner").classList.remove("flipped");
+}
+
+function flipCard() { isFlipped = !isFlipped; document.getElementById("card-inner").classList.toggle("flipped", isFlipped); }
+function prevCard() { if (cardIndex > 0) { cardIndex--; showCard(); } }
+function nextCard() { if (cardIndex < flashcards.length - 1) { cardIndex++; showCard(); } }
+
+// ---- QUIZ ----
+async function generateQuiz() {
+  document.getElementById("quiz-empty").style.display = "none";
+  document.getElementById("quiz-card").style.display = "none";
+  document.getElementById("quiz-loader").style.display = "flex";
+  quizAnswer = null;
+
+  try {
+    const prompt = `Generate a multiple choice quiz question about Unit ${selectedUnit.id}: ${selectedUnit.name} vocabulary.
+Return ONLY valid JSON: {question: string, options: [4 strings], correct: number 0-3, explanation: string}. No markdown.`;
+    const text = await callGemini(prompt);
+    const clean = text.replace(/```json|```/g, "").trim();
+    quiz = JSON.parse(clean);
+    document.getElementById("quiz-loader").style.display = "none";
+    renderQuiz();
+  } catch(e) {
+    document.getElementById("quiz-loader").style.display = "none";
+    document.getElementById("quiz-empty").style.display = "block";
+    document.getElementById("quiz-empty").innerHTML += `<div class="error-msg" style="margin-top:10px">${e.message}</div>`;
+  }
+}
+
+function renderQuiz() {
+  const card = document.getElementById("quiz-card");
+  card.style.display = "block";
+  document.getElementById("quiz-q").textContent = quiz.question;
+  document.getElementById("quiz-explanation").style.display = "none";
+  document.getElementById("quiz-next").style.display = "none";
+
+  const opts = document.getElementById("quiz-options");
+  opts.innerHTML = "";
+  ["A","B","C","D"].forEach((letter, i) => {
+    const btn = document.createElement("button");
+    btn.className = "option-btn";
+    btn.innerHTML = `<span class="option-letter">${letter}.</span>${escHtml(quiz.options[i] || "")}`;
+    btn.onclick = () => answerQuiz(i);
+    opts.appendChild(btn);
+  });
+}
+
+function answerQuiz(idx) {
+  if (quizAnswer !== null) return;
+  quizAnswer = idx;
+  quizScore.total++;
+  if (idx === quiz.correct) quizScore.correct++;
+  updateScore();
+  document.querySelectorAll(".option-btn").forEach((b, i) => {
+    b.disabled = true;
+    if (i === quiz.correct) b.classList.add("correct");
+    else if (i === idx) b.classList.add("wrong");
+  });
+  const exp = document.getElementById("quiz-explanation");
+  exp.textContent = (idx === quiz.correct ? "✅ Correct! " : "❌ Wrong. ") + quiz.explanation;
+  exp.style.display = "block";
+  document.getElementById("quiz-next").style.display = "inline-block";
+}
+
+function updateScore() {
+  document.getElementById("q-correct").textContent = quizScore.correct;
+  document.getElementById("q-total").textContent = quizScore.total;
+  const acc = document.getElementById("q-accuracy");
+  if (quizScore.total > 0) {
+    const pct = Math.round(quizScore.correct / quizScore.total * 100);
+    acc.innerHTML = `Accuracy: <span class="${pct > 60 ? 'score-good' : 'score-num'}">${pct}%</span>`;
+  }
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>
